@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospital Staff Dashboard</title>
+
+
+    <!-- Tab Icon (Favicon) -->
+    <link rel="icon" href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSosixMJmT-34-mAM12NSBIDicMmoo_lSpeZbsJMMP7gcaTJ4WBym58MEk&s=10">
+
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        th.sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+        th.sortable:hover {
+            background-color: #343a40 !important;
+        }
+        .sort-icon::after {
+            content: ' ↕';
+            opacity: 0.4;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body class="bg-light">
+
+
+    <!-- Top Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow-sm">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold text-primary" href="#">
+                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSosixMJmT-34-mAM12NSBIDicMmoo_lSpeZbsJMMP7gcaTJ4WBym58MEk&s=10" class="rounded-5" width=50 alt=""> CityCare Hospital
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/dashboard">Staff Dashboard</a>
+                    </li>
+                </ul>
+                <span class="navbar-text text-white">
+                    Logged in as <strong>Admin</strong>
+                </span>
+            </div>
+        </div>
+    </nav>
+
+
+    <div class="container-fluid px-4">
+        <div class="bg-white p-4 rounded shadow-sm">
+            <h3 class="mb-4 text-primary">Hospital Staff Directory</h3>
+
+
+            <!-- Filter Controls Area -->
+            <div class="row g-3 mb-4 align-items-center">
+                <!-- Search Bar -->
+                <div class="col-md-4">
+                    <input type="text" id="searchInput" class="form-control" onkeyup="filterTable()" placeholder="🔍 Search name, email, phone...">
+                </div>
+
+
+                <!-- Role Filter Dropdown -->
+                <div class="col-md-4">
+                    <select id="roleFilter" class="form-select" onchange="filterTable()">
+                        <option value="">All Roles</option>
+                        <option value="surgeon doctor">Surgeon Doctor</option>
+                        <option value="general doctor">General Doctor</option>
+                        <option value="compounder">Compounder</option>
+                        <option value="maintainerStaff">Maintainer Staff</option>
+                        <option value="Therapist">Therapist</option>
+                    </select>
+                </div>
+
+
+                <!-- Clear Filters Button -->
+                <div class="col-md-4">
+                    <button class="btn btn-outline-secondary w-100" onclick="resetFilters()">Reset Filters</button>
+                </div>
+            </div>
+
+
+            <!-- Staff Table -->
+            <div class="table-responsive">
+                <table class="table table-striped table-hover table-bordered align-middle" id="staffTable">
+                    <thead class="table-dark">
+                        <tr>
+                            <th class="sortable sort-icon" onclick="sortTable(0, 'number')">UID</th>
+                            <th class="sortable sort-icon" onclick="sortTable(1, 'text')">Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th class="sortable sort-icon" onclick="sortTable(4, 'text')">Role</th>
+                            <th>Specialization</th>
+                            <th class="sortable sort-icon" onclick="sortTable(6, 'number')">Experience</th>
+                            <th class="sortable sort-icon" onclick="sortTable(7, 'currency')">Salary ($)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr class="data-row">
+                            <td>{{ user[0] }}</td>
+                            <td><strong>{{ user[1] }}</strong></td>
+                            <td>{{ user[2] }}</td>
+                            <td>{{ user[3] }}</td>
+                            <td data-role="{{ user[4] }}">
+                                {% if user[4] == 'surgeon doctor' %}
+                                    <span class="badge bg-danger">{{ user[4] }}</span>
+                                {% elif user[4] == 'general doctor' %}
+                                    <span class="badge bg-primary">{{ user[4] }}</span>
+                                {% elif user[4] == 'compounder' %}
+                                    <span class="badge bg-warning text-dark">{{ user[4] }}</span>
+                                {% elif user[4] == 'maintainerStaff' %}
+                                    <span class="badge bg-secondary">{{ user[4] }}</span>
+                                {% else %}
+                                    <span class="badge bg-info text-dark">{{ user[4] }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ user[5] }}</td>
+                            <td data-val="{{ user[6] }}">{{ user[6] }} yrs</td>
+                            <td data-val="{{ user[7] }}">${{ "%.2f"|format(user[7]) }}</td>
+                        </tr>
+                        {% endfor %}
+
+
+                        <!-- Dynamic 'No Data Found' row -->
+                        <tr id="noDataRow" style="display: none;">
+                            <td colspan="8" class="text-center text-danger py-4">
+                                <strong>⚠️ No matching staff records found.</strong>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+
+    <!-- Filter and Sort Logic -->
+    <script>
+        // 1. FILTERING FUNCTIONALITY
+        function filterTable() {
+            let search = document.getElementById('searchInput').value.toLowerCase();
+            let role = document.getElementById('roleFilter').value.toLowerCase();
+            let rows = document.querySelectorAll('#staffTable tbody tr.data-row');
+            let noDataRow = document.getElementById('noDataRow');
+            let visibleCount = 0;
+
+
+            rows.forEach(row => {
+                let text = row.innerText.toLowerCase();
+                let userRole = row.children[4].getAttribute('data-role').toLowerCase();
+
+
+                let matchesSearch = text.includes(search);
+                let matchesRole = role === "" || userRole === role;
+
+
+                if (matchesSearch && matchesRole) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+
+            // Toggle 'No Data Found' row if all records are filtered out
+            if (visibleCount === 0) {
+                noDataRow.style.display = '';
+            } else {
+                noDataRow.style.display = 'none';
+            }
+        }
+
+
+        function resetFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('roleFilter').value = '';
+            filterTable();
+        }
+
+
+        // 2. SORTING FUNCTIONALITY
+        let currentSortColumn = -1;
+        let isAscending = true;
+
+
+        function sortTable(columnIndex, type) {
+            let tbody = document.querySelector("#staffTable tbody");
+            let rows = Array.from(tbody.querySelectorAll("tr.data-row"));
+
+
+            if (currentSortColumn === columnIndex) {
+                isAscending = !isAscending;
+            } else {
+                currentSortColumn = columnIndex;
+                isAscending = true;
+            }
+
+
+            rows.sort((rowA, rowB) => {
+                let cellA = rowA.children[columnIndex];
+                let cellB = rowB.children[columnIndex];
+
+
+                let valA, valB;
+
+
+                if (type === 'number' || type === 'currency') {
+                    valA = parseFloat(cellA.getAttribute('data-val') || cellA.innerText.replace(/[^0-9.-]+/g, ""));
+                    valB = parseFloat(cellB.getAttribute('data-val') || cellB.innerText.replace(/[^0-9.-]+/g, ""));
+                } else {
+                    valA = cellA.innerText.toLowerCase().trim();
+                    valB = cellB.innerText.toLowerCase().trim();
+                }
+
+
+                if (valA < valB) return isAscending ? -1 : 1;
+                if (valA > valB) return isAscending ? 1 : -1;
+                return 0;
+            });
+
+
+            // Re-append sorted rows (keeps noDataRow at the end)
+            rows.forEach(row => tbody.appendChild(row));
+            tbody.appendChild(document.getElementById('noDataRow'));
+        }
+    </script>
+</body>
+</html>
+
